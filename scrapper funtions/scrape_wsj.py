@@ -33,17 +33,4 @@ def scrape_wsj_news():
     wsj_news_dict = dict(zip(title_list, date_list))
     wsj_news_dict = {title: date for title, date in wsj_news_dict.items() if date >= date_range_low}
 
-    elephants = pd.read_excel('elephants.xlsx')
-    elephants_dict = elephants.set_index('Client').to_dict('index')
-
-    results = {}
-
-    for client in elephants_dict.keys():
-        client_res = []
-        for title, date in wsj_news_dict.items():
-            if client.lower() in title.lower():
-                client_res.append(title)
-        if client_res:
-            results[client] = {'news': client_res, 'broker': elephants_dict[client]['Broker'], 'broker_email':elephants_dict[client]['Broker Email']}
-
-    return results
+    return wsj_news_dict

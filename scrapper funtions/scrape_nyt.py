@@ -36,18 +36,5 @@ def scrape_nyt_news():
 
     driver.close()
 
-    # elephants = pd.read_excel('elephants.xlsx')
-    # elephants_dict = elephants.set_index('Client').to_dict('index')
-
-    # results = {}
-
-    # for client in elephants_dict.keys():
-    #     client_res = []
-    #     for title, date in nyt_ma_news_dict.items():
-    #         if client.lower() in title.lower():
-    #             client_res.append(title)
-    #     if client_res:
-    #         results[client] = {'news': client_res, 'broker': elephants_dict[client]['Broker'], 'broker_email':elephants_dict[client]['Broker Email']}
-
     return nyt_ma_news_dict
 

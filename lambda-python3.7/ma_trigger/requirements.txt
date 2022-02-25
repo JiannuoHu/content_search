@@ -1,7 +1,0 @@
-pandas
-bs4
-requests
-lxml
-openpyxl
-selenium == 3.8.0
-chromedriver-binary
