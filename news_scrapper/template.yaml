@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  lambda-python3.7
+
+  Sample SAM Template for lambda-python3.7
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+
+  ChromiumLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: chromium-selenium-layer
+      Description: Headless Chromium and Selenium WebDriver
+      ContentUri: layers/selenium-binaries
+      CompatibleRuntimes:
+        - python3.7
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain
+  
+  PythonDepLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: selenium-layer
+      Description: Selenium, Requests, Chromedriver-binary
+      ContentUri: layers/python-dependencies
+      CompatibleRuntimes:
+        - python3.7
+      LicenseInfo: 'MIT'
+      RetentionPolicy: Retain
+      
+  ScrapeReutersFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ma_trigger/
+      Handler: scrapper.scrape_reuters_news
+      Runtime: python3.7
+      Timeout: 15
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /reuters
+            Method: get       
+  ScrapeWSJFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ma_trigger/
+      Handler: scrapper.scrape_wsj_news
+      Runtime: python3.7
+      Timeout: 15
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /wsj
+            Method: get
+  ScrapeNYTFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ma_trigger/
+      Handler: scrapper.scrape_nyt_news
+      Runtime: python3.7
+      MemorySize: 1000
+      Timeout: 30
+      Layers:
+        - !Ref ChromiumLayer
+        - !Ref PythonDepLayer
+      Environment:
+        Variables:
+          CLEAR_TMP: "true"
+          PATH: /var/lang/bin:/usr/local/bin:/usr/bin/:/bin:/opt/bin:/tmp/bin:/tmp/bin/lib
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /nyt
+            Method: get
+  ScrapeMiddleMktFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ma_trigger/
+      Handler: scrapper.scrape_middlemkt_news
+      Runtime: python3.7
+      MemorySize: 1000
+      Timeout: 30
+      Layers:
+        - !Ref ChromiumLayer
+        - !Ref PythonDepLayer
+      Environment:
+        Variables:
+          CLEAR_TMP: "true"
+          PATH: /var/lang/bin:/usr/local/bin:/usr/bin/:/bin:/opt/bin:/tmp/bin:/tmp/bin/lib
+      Events:
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /themiddlemkt
+            Method: get
+
+Outputs:
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
+  ScrapeReutersFunction:
+    Description: "Webscrapping Lambda Function ARN"
+    Value: !GetAtt ScrapeReutersFunction.Arn
+  ScrapeReutersFunctionIamRole:
+    Description: "Implicit IAM Role created for Webscrapping function"
+    Value: !GetAtt ScrapeReutersFunctionRole.Arn
+  ScrapeNYTFunction:
+    Description: "Webscrapping Lambda Function ARN"
+    Value: !GetAtt ScrapeNYTFunction.Arn
+  ScrapeNYTFunctionIamRole:
+    Description: "Implicit IAM Role created for Webscrapping function"
+    Value: !GetAtt ScrapeNYTFunctionRole.Arn
+  ScrapeWSJFunction:
+    Description: "Webscrapping Lambda Function ARN"
+    Value: !GetAtt ScrapeWSJFunction.Arn
+  ScrapeWSJFunctionIamRole:
+    Description: "Implicit IAM Role created for Webscrapping function"
+    Value: !GetAtt ScrapeWSJFunctionRole.Arn
+  ScrapeMiddleMktFunction:
+    Description: "Webscrapping Lambda Function ARN"
+    Value: !GetAtt  ScrapeMiddleMktFunction.Arn
+  ScrapeMiddleMktFunctionIamRole:
+    Description: "Implicit IAM Role created for Webscrapping function"
+    Value: !GetAtt  ScrapeMiddleMktFunctionRole.Arn
