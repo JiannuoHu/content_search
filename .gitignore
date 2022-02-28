@@ -2,3 +2,4 @@ __pycache__
 .vscode
 env
 jh_twitter_api_doc.xlsx
+venv

@@ -41,7 +41,7 @@ def scrape_website(event, context):
         else:
             return {'app_success': "the website {} might change the html settings".format(event['website'])}
     else:
-        results['app_success'] = 'we scrapped news from {} suceessfully'.format(event['website'])
+        results['app_success'] = 'success'
 
     return results
 

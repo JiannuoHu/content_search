@@ -56,6 +56,15 @@ if __name__ == "__main__":
         results = scrape_website({'website': web, "elephants":elephants}, None)
         res_list.append(results)
 
+
+    for result in res_list:
+        if result['app_success']!='success':
+            tell_slack(result['app_success'])
+
+
+    have_results  = [result for result in res_list if result['app_success']=='success']
+
+
     slack_dict = {}
     slack_dict['content'] = []
     slack_dict['error'] = []
