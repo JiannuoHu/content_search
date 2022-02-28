@@ -1,4 +1,3 @@
-from ma_trigger.scrapper import scrape_website
 import json
 
 def slack_json_builder(slack_dict):
@@ -53,23 +52,15 @@ def slack_error(message):
     
     return print(slack_json)
 
-
 def slack_success(slack_dict):
 
     slack_json = slack_json_builder(slack_dict)
     
     return print(slack_json)
 
-if __name__ == "__main__":
-    website_names = ['reuters', 'nyt','wsj','themiddlemarket']
+def combinor(event, context):
 
-    with open("elephants.json") as f:
-        elephants = json.load(f)
-
-    res_list = []
-    for web in website_names:
-        results = scrape_website({'website': web, "elephants":elephants}, None)
-        res_list.append(results)
+    res_list = event
 
     for result in res_list:
         if result['app_success']!='success':

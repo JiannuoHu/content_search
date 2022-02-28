@@ -15,6 +15,7 @@ def scrape_website(event, context):
                  'themiddlemarket':scrape_middlemkt_news}
 
     news_dict = func_dict[event['website']](event, context)
+
     elephants_list = event['elephants']
 
     results = {}
@@ -39,7 +40,7 @@ def scrape_website(event, context):
         if news_dict:
             return {'app_success': "we couldn't find any revelant clients from the {} news.".format(event['website'])}
         else:
-            return {'app_success': "the website {} might change the html settings".format(event['website'])}
+            return {'app_success': "we couldn't get news from {}".format(event['website'])}
     else:
         results['app_success'] = 'success'
 
@@ -166,7 +167,7 @@ def scrape_wsj_news(event, context):
             title_list.append(content)
 
         date_list = []
-        for timestamp in wsj_bs4.select('div[class*="timestamp"]'):
+        for timestamp in wsj_bs4.select('div[class*="--timestamp--"]'):
             a_date = timestamp.get_text()
             a_date = datetime.strptime(a_date, "%B %d, %Y").date()
             date_list.append(a_date)
