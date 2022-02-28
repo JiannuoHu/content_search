@@ -36,6 +36,7 @@ def convert_to_slack_block(slack_dict):
                 company_info.extend(num_space_list)
             
             fields = []
+            
             for i in range(len(company_info)):
                 fields.append({"type":"mrkdwn", "text": company_info[i]})
                 fields.append({"type":"mrkdwn", "text": news[i]})
@@ -57,11 +58,12 @@ if __name__ == "__main__":
 
     slack_dict = {}
     slack_dict['content'] = []
+    slack_dict['error'] = []
 
     for each_web_result in res_list:
         try:
-            for each_record in each_web_result['records']:
-                if slack_dict['content']:
+            for each_record in each_web_result['records']: # if we found news for target clients
+                if slack_dict['content'] !=[]:
                     if each_record['company'] in [i['company'] for i in slack_dict['content']]:
                         for i in slack_dict['content']:
                             if each_record['company'] == i['company'] and each_record['news'] not in i['news']:
@@ -70,14 +72,30 @@ if __name__ == "__main__":
                         slack_dict['content'].append(each_record)
                 else:
                     slack_dict['content'].append(each_record)
+    
         except:
-            pass
+            if "change the html settings" in each_web_result['app_success']: # if failure
+                slack_dict['error'].append(each_web_result['app_success'])
 
-    if slack_dict['content']:
+            else:
+                pass # no action if we have news but not relate to our target clients
+
+    if slack_dict['content']: # if we found news
         slack_dict['message'] = 'Here are the important m&a news for the past 1 week.'
-    else:
+        slack_dict['error'] = ", ".join(slack_dict['error'])
+
+        if slack_dict['error'] == '': # if no error
+            del slack_dict['error']
+    
+    if slack_dict['error'] and not slack_dict['content']: # if no news but only error
+        slack_dict['message'] = "Doing maintenance work, will update soon"
+        slack_dict['error'] = ", ".join(slack_dict['error'])
+        del slack_dict['content']
+    
+    if not slack_dict['error'] and not slack_dict['content']: # if no news and no error
         slack_dict['message'] = 'No important m&a news found for the past 1 week.'
         del slack_dict['content']
+        del slack_dict['error']
 
     slack_json = convert_to_slack_block(slack_dict)
             
