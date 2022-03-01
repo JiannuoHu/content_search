@@ -1,6 +1,7 @@
 import requests
+import time
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -9,14 +10,14 @@ import os, shutil, uuid
 
 def scrape_website(event, context):
 
+    elephants_list = event['elephants']
+
     func_dict = {'reuters': scrape_reuters_news,
                  'wsj': scrape_wsj_news,
                  'nyt': scrape_nyt_news,
                  'themiddlemarket':scrape_middlemkt_news}
-
+    
     news_dict = func_dict[event['website']](event, context)
-
-    elephants_list = event['elephants']
 
     results = {}
     results['records'] = []
@@ -38,9 +39,9 @@ def scrape_website(event, context):
     
     if not results['records']:
         if news_dict:
-            return {'app_success': "we couldn't find any revelant clients from the {} news.".format(event['website'])}
+            return {'app_success': "{} news retrieved successfully but not client relevant.".format(event['website'])}
         else:
-            return {'app_success': "we couldn't get news from {}".format(event['website'])}
+            return {'app_success': "error! we couldn't extract news from {}".format(event['website'])}
     else:
         results['app_success'] = 'success'
 
@@ -152,28 +153,54 @@ def scrape_wsj_news(event, context):
 
     date_range_high = datetime.today().date()
     date_range_low = datetime.today().date() - timedelta(days=7)
+
     user_agent = 'Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405'
     wsj_deals_url = "https://www.wsj.com/news/types/deals-deal-makers?page={}"
     page_number = 1
     date_filter = date_range_high
 
+    title_list = []
+    date_list = []
+
     while date_filter >= date_range_low:
         wsj_raw = requests.get(wsj_deals_url.format(page_number), headers={'User-Agent': user_agent})
-        wsj_bs4 = BeautifulSoup(wsj_raw.content, features="lxml")
+        status = True
+        timer = 0
 
-        title_list = []
-        for artilce in wsj_bs4.select('h2[class*="headline"]'):
-            content = artilce.get_text()
-            title_list.append(content)
+        while status and timer <=9:
+            if wsj_raw.status_code != 200:
+                print("wsj page {} status code is not 200, entering sleep for 3 seconds".format(page_number))
+                time.sleep(3)
+                timer += 3
+                wsj_raw = requests.get(wsj_deals_url.format(page_number), headers={'User-Agent': user_agent})
+            else:
+                status = False
+        
+        if wsj_raw.status_code == 200:
 
-        date_list = []
-        for timestamp in wsj_bs4.select('div[class*="--timestamp--"]'):
-            a_date = timestamp.get_text()
-            a_date = datetime.strptime(a_date, "%B %d, %Y").date()
-            date_list.append(a_date)
+            wsj_bs4 = BeautifulSoup(wsj_raw.content, features="lxml")
 
-        date_filter = a_date
-        page_number += 1
+            for article in wsj_bs4.select('h2[class*="headline"]'):
+                content = article.get_text()
+                title_list.append(content)
+
+            combined_ts = wsj_bs4.select('div[class*="timestamp"]')
+            if combined_ts != []:
+                for timestamp in combined_ts:
+                    try:
+                        a_date = timestamp.find('div').get_text()
+                        a_date = datetime.strptime(a_date, "%B %d, %Y").date()
+                        date_list.append(a_date)
+                    except:
+                        pass
+            else:
+                a_date = datetime.today().date() - timedelta(days=8)
+
+            date_filter = a_date
+            page_number += 1
+        
+        else:
+            date_filter = datetime.today().date() - timedelta(days=8)
 
     wsj_news_dict = dict(zip(title_list, date_list))
     wsj_news_dict = {title: str(date) for title, date in wsj_news_dict.items() if date >= date_range_low}
@@ -182,29 +209,50 @@ def scrape_wsj_news(event, context):
 
 
 def scrape_nyt_news(event, context):
-
     date_range_low = datetime.today().date() - timedelta(days=7)
+    user_agent = 'Mozilla/5.0 (iPad; U; CPU OS 3_2_1 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Mobile/7B405'
+    ma_news_url = "https://www.nytimes.com/topic/subject/mergers-acquisitions-and-divestitures"
+    nyt_raw = requests.get(ma_news_url, headers={'User-Agent': user_agent})
 
-    if context:
-        driver = lambda_driver()
-    else:
-        driver = normal_driver()
+    status = True
+    timer = 0
 
-    nyt_url = "https://www.nytimes.com/topic/subject/mergers-acquisitions-and-divestitures"
-    driver.get(nyt_url)
-    nyt_news_raw = driver.find_elements(By.XPATH, '//*[@id="collection-Mergers, Acquisitions and Divestitures"]/div[1]/div')[0].text.split('\n')
+    while status and timer <=9:
+        if nyt_raw.status_code != 200:
+            print("nyt status code is not 200, entering sleep for 3 seconds")
+            time.sleep(3)
+            timer += 3
+            nyt_raw = requests.get(ma_news_url, headers={'User-Agent': user_agent})
+        else:
+            status = False
 
-    index_list = []
+    title_list = []
     date_list = []
-    for count, text in enumerate(nyt_news_raw):
-        try:
-            a_date = datetime.strptime(text, "%b. %d, %Y").date()
-            date_list.append(a_date)
-            index_list.append(count -2)
-        except:
-            pass
-    
-    title_list = [nyt_news_raw[i] for i in index_list]
+
+    if nyt_raw.status_code == 200:
+        nyt_content = BeautifulSoup(nyt_raw.content)
+
+        title_list = nyt_content.find_all('ol')[0].find_all('h2')
+        link_list = nyt_content.find_all('ol')[0].find_all('a')
+
+        if title_list !=[] and link_list !=[]:
+            try:
+                title_list = [i.get_text() for i in title_list]
+                
+                date_list = []
+                link_list = [i['href'].split('/')[1:4] for i in link_list]
+                
+                for sub in link_list:
+                    date_elements = [int(i) for i in sub]
+                    a_date = datetime(year = date_elements[0], month = date_elements[1], day = date_elements[2]).date()
+                    date_list.append(a_date)
+            except:
+                title_list = []
+                date_list = []
+        else:
+            title_list = []
+            date_list = []
+
     nyt_ma_news_dict = dict(zip(title_list, date_list))
     nyt_ma_news_dict = {title: str(date) for title, date in nyt_ma_news_dict.items() if date >= date_range_low}
 
@@ -214,10 +262,7 @@ def scrape_middlemkt_news(event, context):
 
     date_range_low = datetime.today().date() - timedelta(days=7)
     
-    if context:
-        driver = lambda_driver()
-    else:
-        driver = normal_driver()
+    driver = lambda_driver()
 
     ma_news_url = 'https://www.themiddlemarket.com/latest-news'
     driver.get(ma_news_url)
