@@ -3,3 +3,4 @@ __pycache__
 env
 jh_twitter_api_doc.xlsx
 venv
+test*notebook/

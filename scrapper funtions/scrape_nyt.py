@@ -34,7 +34,7 @@ def scrape_nyt_news(event, context):
 
         if title_list !=[] and link_list !=[]:
             try:
-                title_list = [i.get_text() for i in title_list]
+                title_list = [i.get_text().replace("'"," ") for i in title_list]
                 temp_list = [i['href'].split('/')[1:4] for i in link_list]
                 link_list = ["nytimes.com"+i['href'] for i in link_list]
                 
@@ -55,4 +55,3 @@ def scrape_nyt_news(event, context):
     nyt_ma_news_dict = {title: info[1] for title, info in nyt_ma_news_dict.items() if info[0] >= date_range_low}
 
     return nyt_ma_news_dict
-

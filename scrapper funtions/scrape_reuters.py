@@ -29,7 +29,7 @@ def scrape_reuters_news(event, context):
 
         for i in range(len(reuters_news_list)):
             title = reuters_news_list[i].get_text()
-            title = title.split('\n\t\t\t\t\t\t\t\t')[1]
+            title = title.split('\n\t\t\t\t\t\t\t\t')[1].replace("'"," ")
 
             a_date = reuters_timestamp_list[i].get_text()
             if 'am' in a_date or 'pm' in a_date:
@@ -45,4 +45,3 @@ def scrape_reuters_news(event, context):
     reuters_news_dict = {title: info[1] for title, info in reuters_news_dict.items() if info[0] >= date_range_low}
 
     return reuters_news_dict
-

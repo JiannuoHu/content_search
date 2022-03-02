@@ -36,10 +36,10 @@ def scrape_wsj_news(event, context):
             wsj_bs4 = BeautifulSoup(wsj_raw.content, features="lxml")
 
             for article in wsj_bs4.select('h2[class*="headline"]'):
-                content = article.get_text()
+                content = article.get_text().replace("'"," ")
                 link = article.find('a')['href']
-                title_list.append(content)
-                link_list.append(link)
+                title_list.append(str(content))
+                link_list.append(str(link))
 
             combined_ts = wsj_bs4.select('div[class*="timestamp"]')
             if combined_ts != []:
