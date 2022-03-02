@@ -3,7 +3,7 @@ import time
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
-def scrape_wsj_news():
+def scrape_wsj_news(event, context):
 
     date_range_high = datetime.today().date()
     date_range_low = datetime.today().date() - timedelta(days=7)
@@ -15,6 +15,7 @@ def scrape_wsj_news():
 
     title_list = []
     date_list = []
+    link_list = []
 
     while date_filter >= date_range_low:
         wsj_raw = requests.get(wsj_deals_url.format(page_number), headers={'User-Agent': user_agent})
@@ -33,14 +34,15 @@ def scrape_wsj_news():
         if wsj_raw.status_code == 200:
 
             wsj_bs4 = BeautifulSoup(wsj_raw.content, features="lxml")
-            article_list = wsj_bs4.select('h2[class*="headline"]')
-            combined_ts = wsj_bs4.select('div[class*="timestamp"]')
 
-            if article_list!=[] and combined_ts!=[]:
-                for article in article_list:
-                    content = article.get_text()
-                    title_list.append(content)
-                    
+            for article in wsj_bs4.select('h2[class*="headline"]'):
+                content = article.get_text()
+                link = article.find('a')['href']
+                title_list.append(content)
+                link_list.append(link)
+
+            combined_ts = wsj_bs4.select('div[class*="timestamp"]')
+            if combined_ts != []:
                 for timestamp in combined_ts:
                     try:
                         a_date = timestamp.find('div').get_text()
@@ -57,7 +59,7 @@ def scrape_wsj_news():
         else:
             date_filter = datetime.today().date() - timedelta(days=8)
 
-    wsj_news_dict = dict(zip(title_list, date_list))
-    wsj_news_dict = {title: str(date) for title, date in wsj_news_dict.items() if date >= date_range_low}
+    wsj_news_dict = dict(zip(title_list, zip(date_list, link_list)))
+    wsj_news_dict = {title: info[1] for title, info in wsj_news_dict.items() if info[0] >= date_range_low}
 
     return wsj_news_dict
