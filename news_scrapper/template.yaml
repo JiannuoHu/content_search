@@ -11,6 +11,29 @@ Globals:
     Timeout: 3
 
 Resources:
+  MAnewsStateMachine:
+    Type: AWS::Serverless::StateMachine # More info about State Machine Resource: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-statemachine.html
+    Properties:
+      DefinitionUri: statemachine/statemachine.asl.json
+      DefinitionSubstitutions:
+        ScrapperFunctionArn: !GetAtt ScrapperFunction.Arn
+        CombinorFunctionArn: !GetAtt CombinorFunction.Arn
+        KickoffFunctionArn: !GetAtt KickoffFunction.Arn
+      Events:
+        WeeklyReportSchedule:
+          Type: Schedule # More info about Schedule Event Source: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-statemachine-schedule.html
+          Properties:
+            Description: Trigger the report machine to run every Monday at 9 am EST
+            Enabled: True # This schedule is disabled by default to avoid incurring charges.
+            Schedule: 'cron(0 14 ? * MON *)'
+
+      Policies: # Find out more about SAM policy templates: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-templates.html
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ScrapperFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CombinorFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref KickoffFunction
 
   ChromiumLayer:
     Type: AWS::Serverless::LayerVersion
@@ -40,7 +63,7 @@ Resources:
       CodeUri: ma_trigger/
       Handler: scrapper.scrape_website
       Runtime: python3.7
-      MemorySize: 1000
+      MemorySize: 2500
       Timeout: 100
       Layers:
         - !Ref ChromiumLayer

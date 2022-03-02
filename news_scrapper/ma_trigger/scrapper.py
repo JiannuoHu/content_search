@@ -26,16 +26,20 @@ def scrape_website(event, context):
 
         client = each_company['company']
         client_res = []
+        link_list = []
 
-        for title in news_dict.keys():
+        for title, link in news_dict.items():
             if client.lower() in title.lower():
-               client_res.append(title)
+            #    client_res.append({'title': title, 'link':link})
+                client_res.append(title +"endmark")
+                link_list.append(link)
 
-        if client_res:
+        if client_res and link_list and len(client_res) == len(link_list):
             results['records'].append({'company':client,
                                        'broker': each_company['broker'], 
                                        'broker_email':each_company['broker_email'],
-                                       'news': client_res, })
+                                       'news': client_res,
+                                       'link': link_list})
     
     if not results['records']:
         if news_dict:
@@ -132,6 +136,9 @@ def scrape_reuters_news(event, context):
         reuters_news_list  = reuters_news_block[0].find_all('h3', class_ = 'story-title')
         reuters_timestamp_list = reuters_news_block[0].find_all('span', class_ = 'timestamp')
 
+        link_list = [i.find('a')['href'] for i in reuters_news_block[0].find_all('div', class_ = 'story-content')]
+        link_list = ['reuters.com'+ i for i in link_list]
+
         for i in range(len(reuters_news_list)):
             title = reuters_news_list[i].get_text()
             title = title.split('\n\t\t\t\t\t\t\t\t')[1]
@@ -142,12 +149,14 @@ def scrape_reuters_news(event, context):
             else:
                 a_date = datetime.strptime(a_date, "%b %d %Y").date()
 
-            reuters_news_dict[title] = str(a_date)
+            reuters_news_dict[title] = [a_date, link_list[i]]
 
         date_filter = a_date
         page_number += 1
+    
+    reuters_news_dict = {title: info[1] for title, info in reuters_news_dict.items() if info[0] >= date_range_low}
 
-        return reuters_news_dict
+    return reuters_news_dict
 
 def scrape_wsj_news(event, context):
 
@@ -161,6 +170,7 @@ def scrape_wsj_news(event, context):
 
     title_list = []
     date_list = []
+    link_list = []
 
     while date_filter >= date_range_low:
         wsj_raw = requests.get(wsj_deals_url.format(page_number), headers={'User-Agent': user_agent})
@@ -182,7 +192,9 @@ def scrape_wsj_news(event, context):
 
             for article in wsj_bs4.select('h2[class*="headline"]'):
                 content = article.get_text()
+                link = article.find('a')['href']
                 title_list.append(content)
+                link_list.append(link)
 
             combined_ts = wsj_bs4.select('div[class*="timestamp"]')
             if combined_ts != []:
@@ -202,8 +214,8 @@ def scrape_wsj_news(event, context):
         else:
             date_filter = datetime.today().date() - timedelta(days=8)
 
-    wsj_news_dict = dict(zip(title_list, date_list))
-    wsj_news_dict = {title: str(date) for title, date in wsj_news_dict.items() if date >= date_range_low}
+    wsj_news_dict = dict(zip(title_list, zip(date_list, link_list)))
+    wsj_news_dict = {title: info[1] for title, info in wsj_news_dict.items() if info[0] >= date_range_low}
 
     return wsj_news_dict
 
@@ -228,6 +240,7 @@ def scrape_nyt_news(event, context):
 
     title_list = []
     date_list = []
+    link_list = []
 
     if nyt_raw.status_code == 200:
         nyt_content = BeautifulSoup(nyt_raw.content)
@@ -238,23 +251,24 @@ def scrape_nyt_news(event, context):
         if title_list !=[] and link_list !=[]:
             try:
                 title_list = [i.get_text() for i in title_list]
+                temp_list = [i['href'].split('/')[1:4] for i in link_list]
+                link_list = ["nytimes.com"+i['href'] for i in link_list]
                 
-                date_list = []
-                link_list = [i['href'].split('/')[1:4] for i in link_list]
-                
-                for sub in link_list:
+                for sub in temp_list:
                     date_elements = [int(i) for i in sub]
                     a_date = datetime(year = date_elements[0], month = date_elements[1], day = date_elements[2]).date()
                     date_list.append(a_date)
             except:
                 title_list = []
                 date_list = []
+                link_list = []
         else:
             title_list = []
             date_list = []
+            link_list = []
 
-    nyt_ma_news_dict = dict(zip(title_list, date_list))
-    nyt_ma_news_dict = {title: str(date) for title, date in nyt_ma_news_dict.items() if date >= date_range_low}
+    nyt_ma_news_dict = dict(zip(title_list, zip(date_list,link_list)))
+    nyt_ma_news_dict = {title: info[1] for title, info in nyt_ma_news_dict.items() if info[0] >= date_range_low}
 
     return nyt_ma_news_dict
 
@@ -268,13 +282,17 @@ def scrape_middlemkt_news(event, context):
     driver.get(ma_news_url)
 
     latest_news = driver.find_elements(By.XPATH,"/html/body/main/div/div/div/div[1]/div/div")
-    latest_news = latest_news[0].text.split('\n')    
 
-    ma_article_list = [i for count, i in enumerate(latest_news) if count%2 == 0 ] 
-    ma_date_list = [i for count, i in enumerate(latest_news) if count%2 != 0 ] 
+    if latest_news!= []:
+        latest_news = latest_news[0].text.split('\n')    
 
-    theMiddleMarket_news_dict =  dict(zip(ma_article_list, ma_date_list))
-    theMiddleMarket_news_dict = {key: datetime.strptime(value.title(), '%B %d, %Y').date() for key, value in theMiddleMarket_news_dict.items()}
-    theMiddleMarket_news_dict = {title: str(date) for title, date in theMiddleMarket_news_dict.items() if date >= date_range_low}
+        ma_article_list = [i for count, i in enumerate(latest_news) if count%2 == 0 ] 
+        ma_date_list = [i for count, i in enumerate(latest_news) if count%2 != 0 ]
+
+        theMiddleMarket_news_dict =  dict(zip(ma_article_list, ma_date_list))
+        theMiddleMarket_news_dict = {key: datetime.strptime(value.title(), '%B %d, %Y').date() for key, value in theMiddleMarket_news_dict.items()}
+        theMiddleMarket_news_dict = {title: str(date) for title, date in theMiddleMarket_news_dict.items() if date >= date_range_low}
+    else:
+        theMiddleMarket_news_dict = {}
 
     return theMiddleMarket_news_dict
