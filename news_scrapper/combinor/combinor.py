@@ -20,11 +20,6 @@ def slack_json_builder(slack_dict):
         content_list = slack_dict['content']
 
         for each_content in content_list:
-            each_content['combo'] = list(zip(each_content['news'], each_content['link']))
-            del each_content['news']
-            del each_content['link']
-
-            each_content['combo'] = [list(i) for i in each_content['combo']]
 
             message['blocks'].append({'type':'divider'})
 
@@ -48,7 +43,7 @@ def slack_json_builder(slack_dict):
                 fields.append({"type":"mrkdwn", "text": company_info[i]})
 
                 if news[i] != ' ':
-                    fields.append({"type":"mrkdwn", "text": "<"+ news[i][1] + "|" + news[i][0] + ">"})
+                    fields.append({"type":"mrkdwn", "text": "<"+ news[i]['link'] + "|" + news[i]['title'] + ">"})
                 else:
                     fields.append({"type":"mrkdwn", "text": news[i]})
                     
@@ -81,7 +76,6 @@ def slack_error(message):
 def slack_success(slack_dict):
 
     slack_json = slack_json_builder(slack_dict)
-    print(slack_json)
 
     with open("slackchannel.json") as f:
         links = json.load(f)
@@ -110,7 +104,6 @@ def combinor(event, context):
         for each_web_result in have_results:
 
             for each_record in each_web_result['records']:
-                each_record['news'] = each_record['news'][0].split('endmark, ')
 
                 if slack_dict['content'] !=[]:
 
@@ -118,14 +111,13 @@ def combinor(event, context):
                         for i in slack_dict['content']:
                             if each_record['company'] == i['company'] and each_record['news'] not in i['news']:
                                 i['news'].append(each_record['news'])
-                                i['link'].append(each_record['link'])
                     else:
                         slack_dict['content'].append(each_record)
                 else:
                     slack_dict['content'].append(each_record)
 
         slack_dict['message'] = 'Here are the important m&a news for the past 1 week.'
-
+        
         slack_success(slack_dict)
 
     return "success"

@@ -26,20 +26,17 @@ def scrape_website(event, context):
 
         client = each_company['company']
         client_res = []
-        link_list = []
 
         for title, link in news_dict.items():
             if client.lower() in title.lower():
-            #    client_res.append({'title': title, 'link':link})
-                client_res.append(title +"endmark")
-                link_list.append(link)
+               client_res.append({'title': title, 'link':link})
 
-        if client_res and link_list and len(client_res) == len(link_list):
+
+        if client_res:
             results['records'].append({'company':client,
                                        'broker': each_company['broker'], 
                                        'broker_email':each_company['broker_email'],
-                                       'news': client_res,
-                                       'link': link_list})
+                                       'news': client_res})
     
     if not results['records']:
         if news_dict:
@@ -141,7 +138,7 @@ def scrape_reuters_news(event, context):
 
         for i in range(len(reuters_news_list)):
             title = reuters_news_list[i].get_text()
-            title = title.split('\n\t\t\t\t\t\t\t\t')[1]
+            title = title.split('\n\t\t\t\t\t\t\t\t')[1].replace("'"," ")
 
             a_date = reuters_timestamp_list[i].get_text()
             if 'am' in a_date or 'pm' in a_date:
@@ -191,10 +188,10 @@ def scrape_wsj_news(event, context):
             wsj_bs4 = BeautifulSoup(wsj_raw.content, features="lxml")
 
             for article in wsj_bs4.select('h2[class*="headline"]'):
-                content = article.get_text()
+                content = article.get_text().replace("'"," ")
                 link = article.find('a')['href']
-                title_list.append(content)
-                link_list.append(link)
+                title_list.append(str(content))
+                link_list.append(str(link))
 
             combined_ts = wsj_bs4.select('div[class*="timestamp"]')
             if combined_ts != []:
@@ -250,7 +247,7 @@ def scrape_nyt_news(event, context):
 
         if title_list !=[] and link_list !=[]:
             try:
-                title_list = [i.get_text() for i in title_list]
+                title_list = [i.get_text().replace("'"," ") for i in title_list]
                 temp_list = [i['href'].split('/')[1:4] for i in link_list]
                 link_list = ["nytimes.com"+i['href'] for i in link_list]
                 
