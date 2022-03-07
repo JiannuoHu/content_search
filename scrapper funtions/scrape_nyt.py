@@ -34,14 +34,22 @@ def scrape_nyt_news(event, context):
 
         if title_list !=[] and link_list !=[]:
             try:
-                title_list = [i.get_text().replace("'"," ") for i in title_list]
-                temp_list = [i['href'].split('/')[1:4] for i in link_list]
+
+                title_list = [i.get_text() for i in title_list]
+                temp_list = [i['href'].split('/') for i in link_list]
                 link_list = ["nytimes.com"+i['href'] for i in link_list]
-                
+
                 for sub in temp_list:
-                    date_elements = [int(i) for i in sub]
-                    a_date = datetime(year = date_elements[0], month = date_elements[1], day = date_elements[2]).date()
+                    for i in sub:
+                        if '202' in i and len(i) == 4:
+                            index = sub.index(i)
+                            try:
+                                a_date = datetime(year = int(sub[index]), month = int(sub[index+1]), day = int(sub[index+2])).date()
+                            except:
+                                a_date = datetime.today().date()
+                            break
                     date_list.append(a_date)
+
             except:
                 title_list = []
                 date_list = []
